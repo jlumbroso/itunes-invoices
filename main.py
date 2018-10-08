@@ -34,7 +34,12 @@ def get_apple_cookie(as_string=False):
     if APPLE_COOKIES_CACHE == None:
                 
         # Grab cookie jar from all local browsers (will invoke keychain)
+        # (extra surrounding code to avoid msgs module writes carelessly to stdout)
+        devnull = open(os.devnull, 'w')
+        old_stdout = sys.stdout
+        sys.stdout = devnull
         full_cj = browsercookie.load()
+        sys.stdout = old_stdout
         
         # Retrieve the Apple cookies
         apple_cj = [
