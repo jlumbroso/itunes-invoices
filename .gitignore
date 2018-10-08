@@ -1,0 +1,22 @@
+# Credentials
+client_secret*.json
+
+# macOS metadata
+.DS_Store
+
+# Visual Studio Code metadata
+.vscode
+
+# Sandboxes
+Sandbox*
+
+# Jupyter notebook checkpoints
+.ipynb_checkpoints
+
+# Cached files
+*.pyc
+__pycache__
+
+# Temporary files
+~*
+*~
