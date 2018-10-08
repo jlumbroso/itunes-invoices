@@ -206,18 +206,32 @@ def get_invoices():
     return invoices
 
 
+def csv_export(invoices):
+    lines = ["year,month,day,amount,reference,description"]
+    sorted_invoices = sorted(invoices.values(), key=lambda r: r["date"])
+    for invoice in sorted_invoices:
+        t_str = datetime.datetime.strftime(invoice["date"], "%Y,%m,%d")
+        t_line = '{date_csv},{total},{id},"{description}"'.format(
+            date_csv=t_str, **invoice)
+        lines.append(t_line)
+    return "\n".join(lines)
+
 @click.command()
-def cli_root():
-    pass
+@click.option('--debug/--no-debug', default=False)
+def cli_root(debug):
 
-
-if __name__ == "__main__" and len(sys.argv) > 0 and sys.argv[0] != "":
     # Pretty printing of log messages
     try:
         from nicelog import setup_logging
-        setup_logging(debug=True)
+        setup_logging(debug=debug)
     except ImportError:
         pass
 
+    invoices = get_invoices()
+    csv_str = csv_export(invoices)
+    print(csv_str)
+
+
+if __name__ == "__main__" and len(sys.argv) > 0 and sys.argv[0] != "":
     # Click function
     cli_root()
