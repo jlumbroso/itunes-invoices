@@ -15,12 +15,17 @@ _logger = logging.getLogger("iTunesInvoices")
 
 APPLE_INVOICE_CACHE_FILE = ".apple.invoices.json"
 
-
 APPLE_COOKIES = ["myacinfo"]
 APPLE_COOKIES_CACHE = None
 APPLE_ENDPOINT_BASE = "https://reportaproblem.apple.com"
 APPLE_ENDPOINT_INVOICE_LIST = "/invoices/weborderIds.json"
 APPLE_ENDPOINT_INVOICE_DETAIL = "/invoices/summaries/{invoice_id}.html"
+
+# The day after I released this library, it was already blocked from making calls.
+USER_AGENT = (
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) " +
+    "AppleWebKit/537.36 (KHTML, like Gecko) " +
+    "Chrome/69.0.3497.100 Safari/537.36")
 
 def get_apple_cookie(as_string=False):
     """
@@ -74,7 +79,8 @@ def fetch_invoice_list():
             "batchSize": "100",
         },
         headers={
-            "Cookie": get_apple_cookie(as_string=True)
+            "Cookie": get_apple_cookie(as_string=True),
+            "User-Agent": USER_AGENT,
         }
     )
 
@@ -83,7 +89,11 @@ def fetch_invoice_list():
             data = r.json()
             invoices = list(data.get("idToHint", {}).keys())
             return invoices
-        except JSONDecodeError:
+        except json.JSONDecodeError as e:
+            # TODO: notify user somehow? use Click's exception handling?
+            _logger.debug("Error accessing Apple API...")
+            _logger.debug(r.content)
+            _logger.debug(e)
             pass
 
     return []
@@ -94,7 +104,8 @@ def fetch_invoice(invoice_id):
             APPLE_ENDPOINT_BASE,
             APPLE_ENDPOINT_INVOICE_DETAIL).format(invoice_id=invoice_id),
         headers={
-            "Cookie": get_apple_cookie(as_string=True)
+            "Cookie": get_apple_cookie(as_string=True),
+            "User-Agent": USER_AGENT,
         })
 
     if r.status_code == 200:
@@ -151,9 +162,7 @@ def get_username():
     r = requests.get(
         url=APPLE_ENDPOINT_BASE,
         headers={
-            "User-Agent": ("Mozilla/5.0 (Macintosh; Intel Mac OS X 10_13_6) " +
-                           "AppleWebKit/537.36 (KHTML, like Gecko) " +
-                           "Chrome/69.0.3497.100 Safari/537.36"),
+            "User-Agent": USER_AGENT,
             "Cookie": get_apple_cookie(as_string=True)
         }
     )
@@ -224,6 +233,12 @@ def csv_export(invoices):
 @click.command()
 @click.option('--debug/--no-debug', default=False)
 def cli_root(debug):
+    """
+    Retrieve all recent invoices on your iTunes/Apple account. This requires
+    the user to be logged into a local browser, either Chrome or Firefox;
+    running this program may require an authorization to access the user's
+    cookies.
+    """
 
     # Pretty printing of log messages
     try:
