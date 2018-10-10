@@ -27,6 +27,9 @@ USER_AGENT = (
     "AppleWebKit/537.36 (KHTML, like Gecko) " +
     "Chrome/69.0.3497.100 Safari/537.36")
 
+class AppleException(Exception):
+    pass
+
 def get_apple_cookie(as_string=False):
     """
     Extracts necessary cookies to retrieve Apple API endpoints from
@@ -90,11 +93,10 @@ def fetch_invoice_list():
             invoices = list(data.get("idToHint", {}).keys())
             return invoices
         except json.JSONDecodeError as e:
-            # TODO: notify user somehow? use Click's exception handling?
             _logger.debug("Error accessing Apple API...")
             _logger.debug(r.content)
             _logger.debug(e)
-            pass
+            raise AppleException()
 
     return []
 
@@ -152,7 +154,7 @@ def _from_json(obj):
     # Apply conversion
     val = obj.get('__value__', "")
     if _class_type == "datetime.date":
-        return datetime.datetime.strptime(val, '%Y-%m-%d')
+        return datetime.datetime.strptime(val, '%Y-%m-%d').date()
     elif _class_type == "bytes":
         return bytes(val)
     
@@ -247,9 +249,12 @@ def cli_root(debug):
     except ImportError:
         pass
 
-    invoices = get_invoices()
-    csv_str = csv_export(invoices)
-    print(csv_str)
+    try:
+        invoices = get_invoices()
+        csv_str = csv_export(invoices)
+        print(csv_str)
+    except AppleException:
+        sys.stderr.write("Error: Browser cookies do not contain valid session. Please login again fron Chrome or Firefox.")
 
 
 if __name__ == "__main__" and len(sys.argv) > 0 and sys.argv[0] != "":
